@@ -168,7 +168,7 @@ class DBText:
         return pyodbc.Binary(blob_bytes)
 
     def parse_blob(self, currRowDict, tablesDir):
-        blobFileName, blobType = self.get_blob_file_name(currRowDict, self.get_blob_patterns())
+        blobFileName, blobType = self.get_blob_file_name(self.get_blob_patterns(), )
         blobPath = os.path.join(tablesDir, blobFileName)
         if not os.path.isfile(blobPath):
             sys.stderr.write("ERROR: Could not find any blob files named " + blobFileName + "!\n")
@@ -300,8 +300,9 @@ class DBText:
             except:
                 self.maxval[tabname] = notabmax
         ttcnxn.close()
-    
-    def append_to_sql_query(self, column_tuple):
+
+    @staticmethod
+    def append_to_sql_query(column_tuple):
         if column_tuple[1] in [ "datetime", "image", "varbinary" ]:
             return "%s" % column_tuple[0]
         elif column_tuple[1] in [ "binary", "timestamp" ]:
@@ -309,12 +310,14 @@ class DBText:
         else:
             return str(column_tuple[0])
 
-    def get_row_data(self, row, column_names, col_name):
+    @staticmethod
+    def get_row_data(row, column_names, col_name):
         for i, (name, _) in enumerate(column_names):
             if col_name == name:
                 return str(row[i]).strip()
 
-    def extract_blobs(self, column_value):
+    @staticmethod
+    def extract_blobs(column_value):
         return [ column_value ]
 
     def get_row_data_based_on_type(self, column_name, column_type, column_value):
@@ -333,7 +336,8 @@ class DBText:
         finally: 
             return "%s: %s" % (column_name, column_value_str), blobs
 
-    def getColumnSortKey(self, coldata):
+    @staticmethod
+    def getColumnSortKey(coldata):
         # Column ordering can vary a lot, depending on how the db was created. We always show the columns in a standard order
         # The IDs come at the top, with other stuff sorted alphabetically
         name = coldata[0]
@@ -351,8 +355,9 @@ class DBText:
             return postfix
         else:
             return prefix + postfix
-        
-    def get_blob_patterns(self):
+
+    @staticmethod
+    def get_blob_patterns():
         return []
         
     def make_empty_tables_dir(self, writeDir):
@@ -382,11 +387,12 @@ class DBText:
                 print("Getting data for table(s)", repr(tablespec), ",", repr(constraint))
                 rows, colnames = self.extract_data_for_dump(ttcxn, tablespec, constraint)
                 if len(rows) > 0:
-                    self.store_table_data(table_data, tablespec, rows, colnames)
+                    self.store_table_data(tablespec, rows, colnames, )
         for tablename, (rows, colnames) in table_data.items():
             self.write_dump_data(rows, colnames, tablename, table_file_pattern, blob_patterns)
-            
-    def store_table_data(self, table_data, tablespec, rows, colnames):
+
+    @staticmethod
+    def store_table_data(table_data, tablespec, rows, colnames):
         if "," not in tablespec:
             table_data[tablespec] = list(map(tuple, rows)), colnames 
             return
@@ -427,8 +433,9 @@ class DBText:
     def get_table_names(self, ttcxn):
         cursor = ttcxn.cursor()
         return [ row.table_name for row in cursor.tables(tableType="TABLE") ]
-    
-    def in_exclude_patterns(self, tn, patterns):
+
+    @staticmethod
+    def in_exclude_patterns(tn, patterns):
         return any((fnmatch(tn, pattern) for pattern in patterns))
 
     def expand_table_names(self, ttcxn, table_str, exclude):
@@ -446,7 +453,8 @@ class DBText:
         else:
             return [t for t in tables if t not in exclude_names]
 
-    def get_blob_patterns_for_dump(self, sut_ext):
+    @staticmethod
+    def get_blob_patterns_for_dump():
         return []
 
     def dumptables(self, sut_ext, table_str, usemaxcol='rv', exclude="", dumpwholenamestr="", dumpableBlobs=True):
@@ -462,7 +470,7 @@ class DBText:
                     usemaxcol = descparts[1]
                 dumpwhole = tablename in dumpwholenames
                 constraint = 'WHERE ' + usemaxcol + ' > ' + maxval if usemaxcol and not dumpwhole else ""
-                blob_patterns = self.get_blob_patterns_for_dump(sut_ext)
+                blob_patterns = self.get_blob_patterns_for_dump()
                 self.dumptable(ttcxn, tablename, constraint, table_fn_pattern, blob_patterns, dumpableBlobs)
                 
     def get_column_names_for_spec(self, ttcxn, tablespec):
@@ -479,8 +487,9 @@ class DBText:
             return colnames, timestamp_col
         else:
             return self.get_column_names(ttcxn, tablespec)
-        
-    def get_column_index(self, ttcxn, tablename, colname):
+
+    @staticmethod
+    def get_column_index(ttcxn, tablename, colname):
         cols = ttcxn.cursor().columns(table=tablename)
         for i, col in enumerate(cols):
             if col.column_name == colname:
@@ -553,8 +562,9 @@ class DBText:
                     blobs += currBlobs
                 if dumpableBlobs and blobs:
                     self.dumpblobs(blobs, blob_patterns, row, colnames)
-                    
-    def get_blob_file_name(self, fileNameData, blob_patterns):
+
+    @staticmethod
+    def get_blob_file_name(fileNameData, blob_patterns):
         for blob_pattern in blob_patterns:
             fn = Template(blob_pattern).safe_substitute(fileNameData)
             if "$" not in fn:
@@ -576,7 +586,7 @@ class DBText:
 
         fileNameData = FileNameData()
         for b in blobs:
-            blobFileName, _ = self.get_blob_file_name(fileNameData, blob_patterns)
+            blobFileName, _ = self.get_blob_file_name(blob_patterns, )
             if blobFileName:
                 with open(blobFileName, "wb") as f:
                     f.write(b)
