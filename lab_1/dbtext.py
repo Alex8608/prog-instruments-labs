@@ -121,7 +121,7 @@ class DBText:
             self.add_table_data(tableFile, ttcxn)
               
     @classmethod
-    def expand_value(cls, tables_dir, value):
+    def expand_value(cls, value):
         if "${" in value:
             return os.path.expandvars(value)
         elif "###NOWDATETIME###" in value:
@@ -133,7 +133,6 @@ class DBText:
     def parse_table_file(cls, fn):
         rows = []
         curr_row_data = []
-        tables_dir = os.path.dirname(fn)
         with open(fn) as f:
             for line in f:
                 if line.startswith("ROW"):
@@ -142,7 +141,7 @@ class DBText:
                     curr_row_data = []
                 elif ":" in line:
                     key, value = [ part.strip() for part in line.split(":", 1) ]
-                    value = cls.expand_value(tables_dir, value)
+                    value = cls.expand_value(value)
                     curr_row_data.append((key, value))
         rows.append(curr_row_data)
         return rows
@@ -159,13 +158,13 @@ class DBText:
                     f.write(row_str)
                     
     @classmethod
-    def package_blobs(cls, blobs, *args):
+    def package_blobs(cls, blobs):
         return blobs[0]
         
     @classmethod                
-    def make_blob(cls, blob_files, blob_type):
+    def make_blob(cls, blob_files):
         blobs = [open(fn, "rb").read() for fn in blob_files]
-        blob_bytes = cls.package_blobs(blobs, blob_type)
+        blob_bytes = cls.package_blobs(blobs)
         return pyodbc.Binary(blob_bytes)
 
     def parse_blob(self, curr_row_dict, tables_dir):
@@ -174,7 +173,7 @@ class DBText:
         if not os.path.isfile(blob_path):
             sys.stderr.write("ERROR: Could not find any blob files named " + blob_file_name + "!\n")
             return pyodbc.Binary(b"")
-        return self.make_blob([blob_path], blob_type)
+        return self.make_blob([blob_path])
                     
     def parse_row_value(self, value, curr_row_dict, tables_dir):
         if value == "None":
