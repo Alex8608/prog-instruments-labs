@@ -592,7 +592,7 @@ class DBText:
                     f.write(b)
                     
                     
-class MSSQL_DBText(DBText):
+class MSSQLDBText(DBText):
     def get_create_db_args(self, mdffile=None):
         localdbFolder = os.getenv("TEXTTEST_SANDBOX")
         if mdffile:
@@ -656,7 +656,7 @@ class MSSQL_DBText(DBText):
         return 'DRIVER={' + driver + '};SERVER=(localdb)\\' + server + ';Integrated Security=true;DATABASE=%s;'
     
     
-class MySQL_DBText(DBText):
+class MySQLDBText(DBText):
 
     def __init__(self, database=None, master_connection=None, ansi_sql_mode=False):
         """
@@ -695,7 +695,7 @@ class MySQL_DBText(DBText):
         return 'DRIVER={' + driver + '};SERVER=localhost;USER=root;OPTION=3;DATABASE=%s;'
 
 
-class Sqlite3_DBText(DBText):
+class Sqlite3DBText(DBText):
 
     @classmethod
     def make_connection(cls, dbname):
