@@ -47,6 +47,7 @@ class DBText:
         self.populate_empty_db(sqlfile)
 
     def create_empty_db(self, **kw):
+        attachsql = ""
         try:
             attachsql = "CREATE DATABASE " + self.database_name + self.get_create_db_args(**kw) + ";"
             self.query(attachsql)
@@ -70,11 +71,11 @@ class DBText:
             print(f"Unexpected error for populate empty db {self.database_name}:\n", e)
             raise
 
-    def execute_setup_query(self, ttcxn, currQuery):
+    def execute_setup_query(self, ttcxn, curr_query):
         try:
-            ttcxn.cursor().execute(currQuery)
+            ttcxn.cursor().execute(curr_query)
         except pyodbc.Error:
-            print("Failed to execute query:\n" + repr(currQuery))
+            print("Failed to execute query:\n" + repr(curr_query))
             raise
             
     def read_sql_file(self, ttcxn, sqlfile):
@@ -154,8 +155,8 @@ class DBText:
                 header = "ROW:" + row_id + "\n"
                 f.write(header)
                 for colname, value in row:
-                    rowStr = '   ' + colname + ": " + value + "\n"
-                    f.write(rowStr)
+                    row_str = '   ' + colname + ": " + value + "\n"
+                    f.write(row_str)
                     
     @classmethod
     def package_blobs(cls, blobs, *args):
@@ -322,11 +323,11 @@ class DBText:
 
     def get_row_data_based_on_type(self, column_name, column_type, column_value):
         blobs = []
+        column_value_str = "<blob data>"
         try:
             if column_type in [ "image", "varbinary" ] and column_value is not None:
                 try:
                     blobs = self.extract_blobs(column_value)
-                    column_value_str = "<blob data>"
                 except:
                     column_value_str = column_value
             elif column_type == "datetime" and column_value is not None:
@@ -387,7 +388,7 @@ class DBText:
                 print("Getting data for table(s)", repr(tablespec), ",", repr(constraint))
                 rows, colnames = self.extract_data_for_dump(ttcxn, tablespec, constraint)
                 if len(rows) > 0:
-                    self.store_table_data(tablespec, rows, colnames, )
+                    self.store_table_data(table_data, tablespec, rows, colnames)
         for tablename, (rows, colnames) in table_data.items():
             self.write_dump_data(rows, colnames, tablename, table_file_pattern, blob_patterns)
 
@@ -413,9 +414,9 @@ class DBText:
             firstcol = min(tablecolindices)
             lastcol = max(tablecolindices)
             for row in rows:
-                newRow = row[firstcol:lastcol + 1]
-                if newRow not in tablerows:
-                    tablerows.append(newRow)
+                new_row = row[firstcol:lastcol + 1]
+                if new_row not in tablerows:
+                    tablerows.append(new_row)
                     
     def write_all_tables(self, table_file_pattern, blob_pattern, ttcxn):
         for tablename in self.get_table_names(ttcxn):
@@ -457,7 +458,7 @@ class DBText:
     def get_blob_patterns_for_dump():
         return []
 
-    def dumptables(self, sut_ext, table_str, usemaxcol='rv', exclude="", dumpwholenamestr="", dumpableBlobs=True):
+    def dumptables(self, sut_ext, table_str, usemaxcol='rv', exclude="", dumpwholenamestr="", dumpable_blobs=True):
         dumpwholenames = dumpwholenamestr.split(',')
         with self.make_connection(self.database_name) as ttcxn:
             for descname in self.expand_table_names(ttcxn, table_str, exclude):
@@ -471,7 +472,7 @@ class DBText:
                 dumpwhole = tablename in dumpwholenames
                 constraint = 'WHERE ' + usemaxcol + ' > ' + maxval if usemaxcol and not dumpwhole else ""
                 blob_patterns = self.get_blob_patterns_for_dump()
-                self.dumptable(ttcxn, tablename, constraint, table_fn_pattern, blob_patterns, dumpableBlobs)
+                self.dumptable(ttcxn, tablename, constraint, table_fn_pattern, blob_patterns, dumpable_blobs)
                 
     def get_column_names_for_spec(self, ttcxn, tablespec):
         if "," in tablespec:
@@ -707,8 +708,8 @@ class Sqlite3DBText(DBText):
     def drop(self):
         pass
 
-    def execute_setup_query(self, ttcxn, currQuery):
-        ttcxn.executescript(currQuery)
+    def execute_setup_query(self, ttcxn, curr_query):
+        ttcxn.executescript(curr_query)
 
     def get_table_names(self, ttcxn):
         cursor = ttcxn.cursor()
