@@ -720,12 +720,15 @@ class Sqlite3DBText(DBText):
         cursor = ttcxn.cursor()
         cursor.execute(f"PRAGMA TABLE_INFO({tablename})")
 
+
         class Sqlite3Column:
             def __init__(self, pragma_data):
                 self.column_name = pragma_data[1]
                 self.type_name = pragma_data[2].lower()
+
             def __repr__(self):
                 return f"Sqlite3Column({self.column_name}, {self.type_name})"
+
 
         cols = [Sqlite3Column(pragma_data) for pragma_data in cursor.fetchall()]
         return cols
