@@ -591,6 +591,10 @@ class DBText:
             if blob_file_name:
                 with open(blob_file_name, "wb") as f:
                     f.write(b)
+
+    @classmethod
+    def make_connection_string_template(cls):
+        return 'Something should be there...'
                     
                     
 class MSSQLDBText(DBText):
