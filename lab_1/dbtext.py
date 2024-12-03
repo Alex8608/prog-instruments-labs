@@ -1,11 +1,7 @@
 #!/usr/bin/python
-
 """
 dbtext is a class to use for dynamically create test databases within SQL Server localdb
-
-
 """
-
 # http://code.google.com/p/pyodbc/
 import sqlite3
 import pyodbc
@@ -718,8 +714,3 @@ class Sqlite3_DBText(DBText):
 
     def insert_row_data(self, ttcxn, sql, data, table_name):
         ttcxn.cursor().execute(sql, list(data.values()))
-
-
-
-
-
