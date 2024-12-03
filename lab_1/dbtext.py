@@ -148,7 +148,7 @@ class DBText:
         return rows
     
     @classmethod
-    def write_table_file(self, rows, fn, as_update=False):
+    def write_table_file(cls, rows, fn, as_update=False):
         with open(fn, 'w') as f:
             for il, row in enumerate(rows):
                 row_id = "+" if as_update else str(il)
@@ -578,11 +578,11 @@ class DBText:
 
 
         class FileNameData:
-            def __getitem__(innerself, key): # @NoSelf
-                return self.get_row_data(row, column_names, key)
+            def __getitem__(self, key): # @NoSelf
+                return DBText.get_row_data(row, column_names, key)
             
-            def __contains__(innerself, key): # @NoSelf
-                return self.get_row_data(row, column_names, key) is not None
+            def __contains__(self, key): # @NoSelf
+                return DBText.get_row_data(row, column_names, key) is not None
 
 
         file_name_data = FileNameData()
