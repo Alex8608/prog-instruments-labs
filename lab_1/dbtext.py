@@ -17,6 +17,7 @@ from glob import glob
 from fnmatch import fnmatch
 from datetime import datetime
 
+
 class DBText:
     """
     This is an abstract class - use one of the subclasses specific to your database server.
@@ -500,7 +501,7 @@ class DBText:
                     colnames.append((col.column_name, col.type_name))
             if col.type_name != "timestamp":
                 colnames.append((col.column_name, col.type_name))
-        
+
         colnames.sort(key=self.getColumnSortKey)
         return colnames, timestampcol
 
@@ -528,7 +529,7 @@ class DBText:
                 sys.stderr.write(f"ERROR: could not write table(s) {tablespec} due to problems with query:\n{sqltext}\n")
                 sys.stderr.write(str(e) + "\n")
                 return [], colnames
-        
+
         return rows, colnames
      
     def dumptable(self, ttcxn, tablename, constraint, table_fn_pattern, blob_pattern, dumpableBlobs=True):
@@ -558,18 +559,21 @@ class DBText:
             fn = Template(blob_pattern).safe_substitute(fileNameData)
             if "$" not in fn:
                 return fn, os.path.dirname(blob_pattern)
-            
+
         sys.stderr.write("Failed to find blob given patterns " + repr(blob_patterns) + " and " + repr(fileNameData) + "\n")
         return None, None
 
     def dumpblobs(self, blobs, blob_patterns, row, column_names):
+
+
         class FileNameData:
             def __getitem__(innerself, key): # @NoSelf
                 return self.get_row_data(row, column_names, key)
             
             def __contains__(innerself, key): # @NoSelf
                 return self.get_row_data(row, column_names, key) is not None
-            
+
+
         fileNameData = FileNameData()
         for b in blobs:
             blobFileName, _ = self.get_blob_file_name(fileNameData, blob_patterns)
