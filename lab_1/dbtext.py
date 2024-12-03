@@ -298,8 +298,9 @@ class DBText:
             try:
                 rows = ttcnxn.cursor().execute('select MAX(' + maxcolname + ') AS maxval FROM ' + tabname).fetchall()
                 self.maxval[tabname] = rows[0].maxval
-            except:
+            except Exception as e:
                 self.maxval[tabname] = notabmax
+                print(f"Unexpected exception: {e}")
         ttcnxn.close()
 
     @staticmethod
@@ -328,8 +329,9 @@ class DBText:
             if column_type in [ "image", "varbinary" ] and column_value is not None:
                 try:
                     blobs = self.extract_blobs(column_value)
-                except:
+                except Exception as e:
                     column_value_str = column_value
+                    print(f"Unexpected exception: {e}")
             elif column_type == "datetime" and column_value is not None:
                 column_value_str = column_value.strftime("%Y-%m-%d %H:%M:%S")
             else:
