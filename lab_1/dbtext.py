@@ -337,7 +337,7 @@ class DBText:
             return "%s: %s" % (column_name, column_value_str), blobs
 
     @staticmethod
-    def getColumnSortKey(coldata):
+    def get_column_sort_key(coldata):
         # Column ordering can vary a lot, depending on how the db was created. We always show the columns in a standard order
         # The IDs come at the top, with other stuff sorted alphabetically
         name = coldata[0]
@@ -511,7 +511,7 @@ class DBText:
             if col.type_name != "timestamp":
                 colnames.append((col.column_name, col.type_name))
 
-        colnames.sort(key=self.getColumnSortKey)
+        colnames.sort(key=self.get_column_sort_key)
         return colnames, timestampcol
 
     def query_for_columns(self, ttcxn, tablename):
