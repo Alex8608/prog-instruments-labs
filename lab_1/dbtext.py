@@ -78,49 +78,49 @@ class DBText:
             raise
             
     def read_sql_file(self, ttcxn, sqlfile):
-        currQuery = ''
-        inComment = False
+        curr_query = ''
+        in_comment = False
         with open(sqlfile) as f:
             for line in f:
                 line = line.strip()
                 if not line or "USE [" in line or line.startswith("--"):
                     continue
                 if line.startswith("/*"):
-                    inComment = True
-                if inComment:
+                    in_comment = True
+                if in_comment:
                     if line.endswith("*/"):
-                        inComment = False
+                        in_comment = False
                     continue
                
                 if line in [ "go", "GO" ]:
-                    if currQuery:
-                        self.execute_setup_query(ttcxn, currQuery)
-                        currQuery = ''
+                    if curr_query:
+                        self.execute_setup_query(ttcxn, curr_query)
+                        curr_query = ''
                 else:
-                    if currQuery:
-                        currQuery += "\n"
-                    currQuery += line
-        if currQuery.strip():
-            self.execute_setup_query(ttcxn, currQuery)
+                    if curr_query:
+                        curr_query += "\n"
+                    curr_query += line
+        if curr_query.strip():
+            self.execute_setup_query(ttcxn, curr_query)
 
     def read_tables_dir(self, ttcxn, tables_dir_name):
-        failedFiles = []
+        failed_files = []
         for tableFile in glob(os.path.join(tables_dir_name, "*.table")):
             try:
                 self.add_table_data(tableFile, ttcxn)
             except pyodbc.IntegrityError as ex:
                 fk_constraint_string = "FOREIGN KEY constraint"
                 if fk_constraint_string in ex.args[1]:
-                    failedFiles.append(tableFile)
+                    failed_files.append(tableFile)
                 else:
                     raise ex
                 
         # Things often fail due to constraints, insert everything else and then try them again
-        for tableFile in failedFiles:
+        for tableFile in failed_files:
             self.add_table_data(tableFile, ttcxn)
               
     @classmethod
-    def expand_value(cls, tablesDir, value):
+    def expand_value(cls, tables_dir, value):
         if "${" in value:
             return os.path.expandvars(value)
         elif "###NOWDATETIME###" in value:
@@ -131,26 +131,26 @@ class DBText:
     @classmethod      
     def parse_table_file(cls, fn):
         rows = []
-        currRowData = []
-        tablesDir = os.path.dirname(fn) 
+        curr_row_data = []
+        tables_dir = os.path.dirname(fn)
         with open(fn) as f:
             for line in f:
                 if line.startswith("ROW"):
-                    if currRowData:
-                        rows.append(currRowData)
-                    currRowData = []
+                    if curr_row_data:
+                        rows.append(curr_row_data)
+                    curr_row_data = []
                 elif ":" in line:
                     key, value = [ part.strip() for part in line.split(":", 1) ]
-                    value = cls.expand_value(tablesDir, value)    
-                    currRowData.append((key, value))
-        rows.append(currRowData)
+                    value = cls.expand_value(tables_dir, value)
+                    curr_row_data.append((key, value))
+        rows.append(curr_row_data)
         return rows
     
     @classmethod
-    def write_table_file(self, rows, fn, asUpdate=False):
+    def write_table_file(self, rows, fn, as_update=False):
         with open(fn, 'w') as f:
             for il, row in enumerate(rows):
-                row_id = "+" if asUpdate else str(il)
+                row_id = "+" if as_update else str(il)
                 header = "ROW:" + row_id + "\n"
                 f.write(header)
                 for colname, value in row:
@@ -162,47 +162,47 @@ class DBText:
         return blobs[0]
         
     @classmethod                
-    def make_blob(cls, blobFiles, blobType):
-        blobs = [ open(fn, "rb").read() for fn in blobFiles ]
-        blob_bytes = cls.package_blobs(blobs, blobType)
+    def make_blob(cls, blob_files, blob_type):
+        blobs = [open(fn, "rb").read() for fn in blob_files]
+        blob_bytes = cls.package_blobs(blobs, blob_type)
         return pyodbc.Binary(blob_bytes)
 
-    def parse_blob(self, currRowDict, tablesDir):
-        blobFileName, blobType = self.get_blob_file_name(self.get_blob_patterns(), )
-        blobPath = os.path.join(tablesDir, blobFileName)
-        if not os.path.isfile(blobPath):
-            sys.stderr.write("ERROR: Could not find any blob files named " + blobFileName + "!\n")
+    def parse_blob(self, curr_row_dict, tables_dir):
+        blob_file_name, blob_type = self.get_blob_file_name(curr_row_dict, self.get_blob_patterns())
+        blob_path = os.path.join(tables_dir, blob_file_name)
+        if not os.path.isfile(blob_path):
+            sys.stderr.write("ERROR: Could not find any blob files named " + blob_file_name + "!\n")
             return pyodbc.Binary(b"")
-        return self.make_blob([ blobPath ], blobType)
+        return self.make_blob([blob_path], blob_type)
                     
-    def parse_row_value(self, value, currRowDict, tablesDir):
+    def parse_row_value(self, value, curr_row_dict, tables_dir):
         if value == "None":
             return None
         elif value == "<blob data>":
-            return self.parse_blob(currRowDict, tablesDir)
+            return self.parse_blob(curr_row_dict, tables_dir)
         elif value.startswith("0x"): # hex string, convert to binary
             return pyodbc.Binary(struct.pack('<Q', int(value, 16)))
         else:
             return value
     
     def add_table_data(self, fn, ttcxn):
-        tablesDir = os.path.dirname(fn)
+        tables_dir = os.path.dirname(fn)
         for currRowData in self.parse_table_file(fn):
             table_name = os.path.basename(fn)[:-6]
-            currRowDict = {}
+            curr_row_dict = {}
             for key, value in currRowData:
-                currRowDict[key] = self.parse_row_value(value, currRowDict, tablesDir)
+                curr_row_dict[key] = self.parse_row_value(value, curr_row_dict, tables_dir)
                 
-            self.insert_row(ttcxn, table_name, currRowDict)
+            self.insert_row(ttcxn, table_name, curr_row_dict)
           
     def insert_row(self, ttcxn, table_name, data, identity_insert=False):
         if not data:
             return
         
-        valueStr = ("?," * len(data))[:-1]
+        value_str = ("?," * len(data))[:-1]
         keys = ", ".join([ self.quote(k) for k in data.keys() ])
         quoted_table = self.quote(table_name)
-        sql = f"INSERT INTO {quoted_table} ({keys}) VALUES ({valueStr})"
+        sql = f"INSERT INTO {quoted_table} ({keys}) VALUES ({value_str})"
         if identity_insert:
             sql = "SET IDENTITY_INSERT " + quoted_table + " ON; " + sql + "; SET IDENTITY_INSERT " + quoted_table + " OFF"  
         self.insert_row_data(ttcxn, sql, data, table_name)
@@ -360,27 +360,27 @@ class DBText:
     def get_blob_patterns():
         return []
         
-    def make_empty_tables_dir(self, writeDir):
-        localName = self.get_tables_dir_name()
-        dirName = os.path.join(writeDir, localName)
-        if os.path.isdir(dirName):
-            shutil.rmtree(dirName)
-        dirsToMake = set()
+    def make_empty_tables_dir(self, write_dir):
+        local_name = self.get_tables_dir_name()
+        dir_name = os.path.join(write_dir, local_name)
+        if os.path.isdir(dir_name):
+            shutil.rmtree(dir_name)
+        dirs_to_make = set()
         blob_patterns = []
         for blob_pattern_local in self.get_blob_patterns():
-            pattern = os.path.normpath(os.path.join(dirName, blob_pattern_local))
+            pattern = os.path.normpath(os.path.join(dir_name, blob_pattern_local))
             blob_patterns.append(pattern)
-            dirsToMake.add(os.path.dirname(pattern))
+            dirs_to_make.add(os.path.dirname(pattern))
             
-        if len(dirsToMake) == 0:
-            dirsToMake.add(dirName)
-        for d in dirsToMake:
+        if len(dirs_to_make) == 0:
+            dirs_to_make.add(dir_name)
+        for d in dirs_to_make:
             os.makedirs(d)
-        table_file_pattern = os.path.join(dirName, "${table_name}.table")
+        table_file_pattern = os.path.join(dir_name, "${table_name}.table")
         return table_file_pattern, blob_patterns
         
-    def write_data_subset(self, writeDir, subset_data):
-        table_file_pattern, blob_patterns = self.make_empty_tables_dir(writeDir)
+    def write_data_subset(self, write_dir, subset_data):
+        table_file_pattern, blob_patterns = self.make_empty_tables_dir(write_dir)
         table_data = {}
         with self.make_connection(self.database_name) as ttcxn:
             for tablespec, constraint in subset_data:
@@ -422,8 +422,8 @@ class DBText:
             print("Making file for table", repr(tablename))
             self.dumptable(ttcxn, tablename, "", table_file_pattern, blob_pattern)
 
-    def write_data(self, writeDir, use_master_connection=False):
-        table_file_pattern, blob_pattern = self.make_empty_tables_dir(writeDir)
+    def write_data(self, write_dir, use_master_connection=False):
+        table_file_pattern, blob_pattern = self.make_empty_tables_dir(write_dir)
         if use_master_connection:
             self.write_all_tables(table_file_pattern, blob_pattern, self.cnxn)
         else:
@@ -541,14 +541,14 @@ class DBText:
 
         return rows, colnames
      
-    def dumptable(self, ttcxn, tablename, constraint, table_fn_pattern, blob_pattern, dumpableBlobs=True):
+    def dumptable(self, ttcxn, tablename, constraint, table_fn_pattern, blob_pattern, dumpable_blobs=True):
         rows, colnames = self.extract_data_for_dump(ttcxn, tablename, constraint) 
         if len(rows) > 0:
-            self.write_dump_data(rows, colnames, tablename, table_fn_pattern, blob_pattern, dumpableBlobs)
+            self.write_dump_data(rows, colnames, tablename, table_fn_pattern, blob_pattern, dumpable_blobs)
         
-    def write_dump_data(self, rows, colnames, tablename, table_fn_pattern, blob_patterns, dumpableBlobs=True):
-        fileName = Template(table_fn_pattern).substitute(table_name=tablename)
-        with codecs.open(fileName, mode='a', encoding='cp1252', errors='replace') as f:
+    def write_dump_data(self, rows, colnames, tablename, table_fn_pattern, blob_patterns, dumpable_blobs=True):
+        file_name = Template(table_fn_pattern).substitute(table_name=tablename)
+        with codecs.open(file_name, mode='a', encoding='cp1252', errors='replace') as f:
             # Note "codecs.open" implicitly opens files in binary mode! Hence the normal handling of "\n" is disabled
             # Use os.linesep instead or we get unix line endings...
             for il, row in enumerate(rows):
@@ -556,21 +556,21 @@ class DBText:
                 f.write(header)
                 blobs = []
                 for ci, (colname, coltype) in enumerate(colnames):
-                    fdata, currBlobs = self.get_row_data_based_on_type(colname, coltype, row[ci])
+                    fdata, curr_blobs = self.get_row_data_based_on_type(colname, coltype, row[ci])
                     value = '   %s' % fdata + os.linesep
                     f.write(value)
-                    blobs += currBlobs
-                if dumpableBlobs and blobs:
+                    blobs += curr_blobs
+                if dumpable_blobs and blobs:
                     self.dumpblobs(blobs, blob_patterns, row, colnames)
 
     @staticmethod
-    def get_blob_file_name(fileNameData, blob_patterns):
+    def get_blob_file_name(file_name_data, blob_patterns):
         for blob_pattern in blob_patterns:
-            fn = Template(blob_pattern).safe_substitute(fileNameData)
+            fn = Template(blob_pattern).safe_substitute(file_name_data)
             if "$" not in fn:
                 return fn, os.path.dirname(blob_pattern)
 
-        sys.stderr.write("Failed to find blob given patterns " + repr(blob_patterns) + " and " + repr(fileNameData) + "\n")
+        sys.stderr.write("Failed to find blob given patterns " + repr(blob_patterns) + " and " + repr(file_name_data) + "\n")
         return None, None
 
     def dumpblobs(self, blobs, blob_patterns, row, column_names):
@@ -584,24 +584,24 @@ class DBText:
                 return self.get_row_data(row, column_names, key) is not None
 
 
-        fileNameData = FileNameData()
+        file_name_data = FileNameData()
         for b in blobs:
-            blobFileName, _ = self.get_blob_file_name(blob_patterns, )
-            if blobFileName:
-                with open(blobFileName, "wb") as f:
+            blob_file_name, _ = self.get_blob_file_name(file_name_data, blob_patterns)
+            if blob_file_name:
+                with open(blob_file_name, "wb") as f:
                     f.write(b)
                     
                     
 class MSSQLDBText(DBText):
     def get_create_db_args(self, mdffile=None):
-        localdbFolder = os.getenv("TEXTTEST_SANDBOX")
+        local_db_folder = os.getenv("TEXTTEST_SANDBOX")
         if mdffile:
             return " ON (FILENAME = '" + mdffile + "') FOR ATTACH_REBUILD_LOG"
-        elif localdbFolder:
+        elif local_db_folder:
             if os.name == "nt":
-                localdbFolder = localdbFolder.replace('/','\\')
-            tmpDbFileName = os.path.join(localdbFolder, self.database_name + ".mdf")
-            return " ON (NAME = '" + self.database_name + "', FILENAME='" + tmpDbFileName + "')"
+                local_db_folder = local_db_folder.replace('/', '\\')
+            tmp_db_file_name = os.path.join(local_db_folder, self.database_name + ".mdf")
+            return " ON (NAME = '" + self.database_name + "', FILENAME='" + tmp_db_file_name + "')"
         else:
             return ""
         
