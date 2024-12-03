@@ -206,7 +206,8 @@ class DBText:
         quoted_table = self.quote(table_name)
         sql = f"INSERT INTO {quoted_table} ({keys}) VALUES ({value_str})"
         if identity_insert:
-            sql = "SET IDENTITY_INSERT " + quoted_table + " ON; " + sql + "; SET IDENTITY_INSERT " + quoted_table + " OFF"  
+            sql = ("SET IDENTITY_INSERT " + quoted_table + " ON; " + sql + "; SET IDENTITY_INSERT " + quoted_table
+                   + " OFF")
         self.insert_row_data(ttcxn, sql, data, table_name)
 
     def insert_row_data(self, ttcxn, sql, data, table_name):
@@ -342,7 +343,8 @@ class DBText:
 
     @staticmethod
     def get_column_sort_key(coldata):
-        # Column ordering can vary a lot, depending on how the db was created. We always show the columns in a standard order
+        # Column ordering can vary a lot, depending on how the db was created. We always show the columns
+        # in a standard order
         # The IDs come at the top, with other stuff sorted alphabetically
         name = coldata[0]
         if name.endswith("_id") or name == "id":
@@ -539,7 +541,8 @@ class DBText:
                 # Table has no rv, dump the constraint and assume the whole table is relevant
                 return self.extract_data_for_dump(ttcxn, tablespec)
             else:
-                sys.stderr.write(f"ERROR: could not write table(s) {tablespec} due to problems with query:\n{sqltext}\n")
+                sys.stderr.write(f"ERROR: could not write table(s) {tablespec}"
+                                 f" due to problems with query:\n{sqltext}\n")
                 sys.stderr.write(str(e) + "\n")
                 return [], colnames
 
@@ -574,7 +577,8 @@ class DBText:
             if "$" not in fn:
                 return fn, os.path.dirname(blob_pattern)
 
-        sys.stderr.write("Failed to find blob given patterns " + repr(blob_patterns) + " and " + repr(file_name_data) + "\n")
+        sys.stderr.write("Failed to find blob given patterns " + repr(blob_patterns) + " and " + repr(file_name_data)
+                         + "\n")
         return None, None
 
     def dumpblobs(self, blobs, blob_patterns, row, column_names):
@@ -669,10 +673,14 @@ class MySQLDBText(DBText):
     def __init__(self, database=None, master_connection=None, ansi_sql_mode=False):
         """
         Use this class when the database you want to set up for testing is MySQL
-        :param database: the name of the database to create for testing. You should give a name that is unique to your test case run, for example include the current process id in the name
-        :param master_connection: a connection to a database that already exists, that dbtext can use to create new databases.
-        By default it will try to connect to a database named 'master'. If one doesn't exist, you could just create an empty one with that name.
-        :param ansi_sql_mode: if the MySQL database is configured to have ANSI mode you should set this flag since it affects the syntax of the SQL you use
+        :param database: the name of the database to create for testing. You should give a name that is unique
+         to your test case run, for example include the current process id in the name
+        :param master_connection: a connection to a database that already exists, that dbtext can use
+         to create new databases.
+        By default it will try to connect to a database named 'master'. If one doesn't exist, you could just create
+         an empty one with that name.
+        :param ansi_sql_mode: if the MySQL database is configured to have ANSI mode you should set this flag since
+         it affects the syntax of the SQL you use
         (see https://dev.mysql.com/doc/refman/5.7/en/sql-mode.html for more information about modes)
         """
         super().__init__(database, master_connection)
@@ -682,7 +690,8 @@ class MySQLDBText(DBText):
         if self.ansi_sql_mode:
             return super().quote(tablespec)
         else:
-            # A default installation of MySQL does not use ANSI mode and uses backticks to escape reserved words in column names etc
+            # A default installation of MySQL does not use ANSI mode and uses backticks to escape reserved words
+            # in column names etc
             return '`' + tablespec + '`'
 
     @classmethod
