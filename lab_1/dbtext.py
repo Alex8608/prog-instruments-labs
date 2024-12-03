@@ -3,11 +3,15 @@
 dbtext is a class to use for dynamically create test databases within SQL Server localdb
 """
 # http://code.google.com/p/pyodbc/
+import os
+import sys
+import subprocess
+import locale
+import codecs
+import shutil
+import struct
 import sqlite3
 import pyodbc
-import os, sys, subprocess, locale
-import codecs
-import shutil, struct
 from string import Template
 from glob import glob
 from fnmatch import fnmatch
