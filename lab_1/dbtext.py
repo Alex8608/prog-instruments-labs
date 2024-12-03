@@ -8,7 +8,6 @@ dbtext is a class to use for dynamically create test databases within SQL Server
 
 # http://code.google.com/p/pyodbc/
 import sqlite3
-
 import pyodbc
 import os, sys, subprocess, locale
 import codecs
@@ -30,7 +29,7 @@ class DBText:
         self.iscreated = master_connection is not None
         self.isconnected = False
         self.startrv = ""
-    
+
         # user master because attach detach
         try:
             self.cnxn = master_connection or self.make_connection("master")
