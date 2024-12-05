@@ -11,13 +11,12 @@ import codecs
 import shutil
 import struct
 import sqlite3
-
-import pyodbc
-
 from string import Template
 from glob import glob
 from fnmatch import fnmatch
 from datetime import datetime
+
+import pyodbc
 
 
 class DBText:
