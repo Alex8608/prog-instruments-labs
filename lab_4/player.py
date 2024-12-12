@@ -29,12 +29,12 @@ __author__='''
 ######################################################
 '''
 # Here Importing Modules
-import pyglet     # import pyglet
+import logging
 import datetime
-import os
-import time
 import threading
+
 import pyglet.media as media
+
 from Configuration_base import *
 
 # ============================================
@@ -50,6 +50,12 @@ from Configuration_base import *
 #   player.YourFunction
 # ============================================
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler(), logging.FileHandler("logs.log", mode='a', encoding='utf-8')]
+)
+
 
 class mediaplayer:
     def __init__(self, path, song_time,song_duration,volume):
@@ -63,16 +69,17 @@ class mediaplayer:
 
         self.path.trace('w',self.play_song)
         self.volume.trace('w', self.volume_)
-        
+        logging.info("class mediaplayer initialized")
+
     def jump(self, time):
         try:
             self.player.seek(time)
+            logging.info("Jumped to time: %.2f", time)
             return 
-        except:
-            print ('[+] Jump is Not Possible')
+        except Exception as e:
+            logging.error("Jump is not possible: %s", e)
             return
-        
-        
+
     def now(self):
         storeobj=self.player.time
         return storeobj
@@ -81,85 +88,92 @@ class mediaplayer:
         time=int(self.now())
         k=datetime.timedelta(seconds=time)
         k=k.__str__()
+        logging.info("Get time in moment")
         return k
 
-        
     def pause(self):
-        self.player.pause()    
+        self.player.pause()
+        logging.info("Player on pause")
         return 
 
     def play(self):
         self.player.play()
+        logging.info("Player on play")
         return
     
     def stop(self):
         self.reset_player()
+        logging.info("Player on stop")
         return
     
     def volume_(self, *args, **kwargs):
         try:
             volume=self.volume.get()
             self.player.volume=volume
-        except:
-            pass
+            logging.info("Volume set to %.2f", volume)
+        except Exception as e:
+            logging.error("Failed to set volume: %s", e)
         return
     
     def time_thread(self):
         threading.Thread(target=self.update_time_).start()
         return
-    
-        
+
     def update_time_(self):
         while True:
             now=self.now_()
             try:
                 self.songtime.set(now)
-                pass
-            
+                logging.info("Time is updated")
             except Exception as e:
-                print e
-                pass
-        
-    
+                logging.error("Error in update_time_: %s", e)
+
     def duration(self):
         try:
             storeobj=self.player.source.duration
+            logging.info("Returned duration")
             return storeobj
-        except:
-            return '0'
+        except Exception as e:
+            logging.error("Error in duration: %s", e)
+
     def duration_(self):
-        time=self.duration()+10.0
-        k=datetime.timedelta(seconds=time)
-        k=k.__str__()
-        return k
+        try:
+            time = self.duration() + 10.0
+            k = datetime.timedelta(seconds=time)
+            k = k.__str__()
+            logging.info("Returned duration_")
+            return k
+        except Exception as e:
+            logging.error("Error duration_: %s", e)
+            return "0"
     
     def reset_player(self):
         self.player.pause()
         self.player.delete()
+        logging.info("Player on reset")
         return
-            
-            
-    
+
     def play_song(self, *args, **kwargs):
         if self.path.get():
             try:
                 self.reset_player()
+                src = media.load(self.path.get())
+                logging.info("The path is corrected")
                 try:
-                    src=media.load(self.path.get())
                     self.player.queue(src)
                     self.play()
-                    
                     self.songduration.set(self.duration_())   # Updating duration Time
+                    logging.info("Player started playing song. Duration of the song: %s",
+                                 self.songduration.get())
                     return 
                 except Exception as e:
-                    print ("[+] Something wrong when playing song",e)
+                    logging.error("Error with play in play_song: %s", e)
                     return 
             except Exception as e:
-                print (' [+] Please Check Your File Path', self.path.get())
-                print (' [+] Error: Problem On Playing \n ',e)
+                logging.error("Error with path in play_song. Path: %s %s", self.path.get(), e)
                 return 
         else:
-            print (' [+] Please Check Your File Path', self.path.get())
+            logging.warning("No file path for player")
         return
 
     def fast_forward(self):
@@ -167,17 +181,24 @@ class mediaplayer:
         try:
             if self.duration() > time:
                 self.player.seek(time)
+                logging.info("Fast-forwarded to %.2f seconds", time)
             else:
                 self.player.seek(self.duration())
-        except AttributeError:
-            pass
+                logging.info("Fast-forwarded to the end of the song.")
+        except Exception as e:
+            logging.error("Error in fast_forward: %s", e)
 
     def rewind(self):
         time = self.player.time - jump_distance
         try:
-            self.player.seek(time)
-        except:
-            self.player.seek(0)
+            if time > 0:
+                self.player.seek(time)
+                logging.info("Rewinded to %.2f seconds", time)
+            else:
+                self.player.seek(0)
+                logging.info("Rewinded to the start of the song.")
+        except Exception as e:
+            logging.error("Error in rewind: %s", e)
 
     
 
